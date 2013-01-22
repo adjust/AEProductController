@@ -30,11 +30,11 @@
 - (id)initWithProductId:(NSString *)product callbackUrl:(NSString *)callback {
     self = [super init];
     if (self == nil) return nil;
-    
+
     self.productId = product;
     self.callbackUrl = callback;
     self.logger = [AELogger loggerWithTag:@"AEProductController" enabled:YES];
-    
+
     return self;
 }
 
@@ -47,12 +47,12 @@
     SKStoreProductViewController *productViewController = [[[SKStoreProductViewController alloc] init] autorelease];
     productViewController.delegate = self;
     NSDictionary *storeParameters = [NSDictionary dictionaryWithObject:self.productId forKey:SKStoreProductParameterITunesItemIdentifier];
-    
+
     // Present the product view controller
     [viewController presentViewController:productViewController animated:YES completion:^(void) {
         [self.logger log:@"Presented product view controller."];
     }];
-    
+
     // Try to load the product and dismiss the product view controller in case of failure
     [productViewController loadProductWithParameters:storeParameters completionBlock:^(BOOL result, NSError *error) {
         if (result) {
@@ -61,8 +61,8 @@
             [self.logger log:@"Failed to load product: %@", error];
         }
     }];
-    
-    //
+
+    // Execute the callback and follow all redirects
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:self.callbackUrl]];
     AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
     [operation setRedirectResponseBlock:^NSURLRequest *(NSURLConnection *connection, NSURLRequest *request, NSURLResponse *redirectResponse) {

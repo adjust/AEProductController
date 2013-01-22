@@ -13,10 +13,10 @@
 - (id)initWithTag:(NSString *)tag enabled:(BOOL)enabled {
     self = [super init];
     if (self == nil) return nil;
-    
+
     self.logTag = tag;
     self.loggingEnabled = enabled;
-    
+
     return self;
 }
 
@@ -28,7 +28,7 @@
     if (!self.loggingEnabled) {
         return;
     }
-    
+
     va_list ap;
     va_start(ap,format);
     NSLog(@"\t[%@] %@", self.logTag, [[NSString alloc] initWithFormat:format arguments:ap]);
