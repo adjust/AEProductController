@@ -43,43 +43,57 @@
 }
 
 - (void)showInViewController:(UIViewController *)viewController {
-    // Prepare the product view controller by providing the product ID.
-    SKStoreProductViewController *productViewController = [[[SKStoreProductViewController alloc] init] autorelease];
-    productViewController.delegate = self;
-    NSDictionary *storeParameters = [NSDictionary dictionaryWithObject:self.productId forKey:SKStoreProductParameterITunesItemIdentifier];
-
-    // Present the product view controller
-    [viewController presentViewController:productViewController animated:YES completion:^(void) {
-        [self.logger log:@"Presented product view controller."];
-    }];
-
-    // Try to load the product and dismiss the product view controller in case of failure
-    [productViewController loadProductWithParameters:storeParameters completionBlock:^(BOOL result, NSError *error) {
-        if (result) {
-            [self.logger log:@"Presented product: %@", self.productId];
-        } else {
-            [self.logger log:@"Failed to load product: %@", error];
-        }
-    }];
-
+    BOOL available = self.class.isAvailable;
+    __block NSURL *lastUrl;
+    
     // Execute the callback and follow all redirects
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:self.callbackUrl]];
     AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
     [operation setRedirectResponseBlock:^NSURLRequest *(NSURLConnection *connection, NSURLRequest *request, NSURLResponse *redirectResponse) {
-        NSString *url = request.URL.absoluteString;
+        lastUrl = request.URL;
         if (redirectResponse == nil) {
-            [self.logger log:@"Callback started: %@", url];
+            [self.logger log:@"Callback started: %@", lastUrl.absoluteString];
         } else {
-            [self.logger log:@"Callback redirected to: %@", url];
+            [self.logger log:@"Callback redirected to: %@", lastUrl.absoluteString];
         }
         return request;
     }];
     [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-        [self.logger log:@"Callback finished."];
+        if (available) {
+            [self.logger log:@"Callback finished."];
+        } else {
+            if ([lastUrl.host isEqualToString:@"itunes.apple.com"]) {
+                [self.logger log:@"Opening iTunes URL externally."];
+                [[UIApplication sharedApplication] openURL:lastUrl];
+            } else {
+                [self.logger log:@"Callback didn't lead to iTunes URL."];
+            }
+        }
     } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-        [self.logger log:@"Callback failed."];
+        [self.logger log:[NSString stringWithFormat:@"Callback failed. %@", error]];
     }];
     [operation start];
+
+    if (available) {
+        // Prepare the product view controller by providing the product ID.
+        SKStoreProductViewController *productViewController = [[[SKStoreProductViewController alloc] init] autorelease];
+        productViewController.delegate = self;
+        NSDictionary *storeParameters = [NSDictionary dictionaryWithObject:self.productId forKey:SKStoreProductParameterITunesItemIdentifier];
+        
+        // Present the product view controller
+        [viewController presentViewController:productViewController animated:YES completion:^(void) {
+            [self.logger log:@"Presented product view controller."];
+        }];
+        
+        // Try to load the product and dismiss the product view controller in case of failure
+        [productViewController loadProductWithParameters:storeParameters completionBlock:^(BOOL result, NSError *error) {
+            if (result) {
+                [self.logger log:@"Presented product: %@", self.productId];
+            } else {
+                [self.logger log:@"Failed to load product: %@", error];
+            }
+        }];
+    }
 }
 
 // SKStoreProductViewControllerDelegate method that dismisses the product view controller
