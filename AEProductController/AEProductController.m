@@ -16,7 +16,6 @@
 @property (copy) NSString *productId;
 @property (copy) NSString *callbackUrl;
 @property (retain) AELogger *logger;
-@property (retain) NSURL *iTunesURL;
 
 @end
 
@@ -44,9 +43,38 @@
 }
 
 - (void)showInViewController:(UIViewController *)viewController {
-    NSArray *vComp = [[UIDevice currentDevice].systemVersion componentsSeparatedByString:@"."];
+    BOOL available = self.class.isAvailable;
+    __block NSURL *lastUrl;
     
-    if ([[vComp objectAtIndex:0] intValue] >= 6) {
+    // Execute the callback and follow all redirects
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:self.callbackUrl]];
+    AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
+    [operation setRedirectResponseBlock:^NSURLRequest *(NSURLConnection *connection, NSURLRequest *request, NSURLResponse *redirectResponse) {
+        lastUrl = request.URL;
+        if (redirectResponse == nil) {
+            [self.logger log:@"Callback started: %@", lastUrl.absoluteString];
+        } else {
+            [self.logger log:@"Callback redirected to: %@", lastUrl.absoluteString];
+        }
+        return request;
+    }];
+    [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
+        if (available) {
+            [self.logger log:@"Callback finished."];
+        } else {
+            if ([lastUrl.host isEqualToString:@"itunes.apple.com"]) {
+                [self.logger log:@"Opening iTunes URL externally."];
+                [[UIApplication sharedApplication] openURL:lastUrl];
+            } else {
+                [self.logger log:@"Callback didn't lead to iTunes URL."];
+            }
+        }
+    } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+        [self.logger log:[NSString stringWithFormat:@"Callback failed. %@", error]];
+    }];
+    [operation start];
+
+    if (available) {
         // Prepare the product view controller by providing the product ID.
         SKStoreProductViewController *productViewController = [[[SKStoreProductViewController alloc] init] autorelease];
         productViewController.delegate = self;
@@ -65,30 +93,6 @@
                 [self.logger log:@"Failed to load product: %@", error];
             }
         }];
-        
-        // Execute the callback and follow all redirects
-        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:self.callbackUrl]];
-        AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
-        [operation setRedirectResponseBlock:^NSURLRequest *(NSURLConnection *connection, NSURLRequest *request, NSURLResponse *redirectResponse) {
-            NSString *url = request.URL.absoluteString;
-            if (redirectResponse == nil) {
-                [self.logger log:@"Callback started: %@", url];
-            } else {
-                [self.logger log:@"Callback redirected to: %@", url];
-            }
-            return request;
-        }];
-        [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-            [self.logger log:@"Callback finished."];
-        } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-            [self.logger log:@"Callback failed."];
-        }];
-        [operation start];
-    } else {
-        // Open AppStore app if iOS version < 6
-        
-        NSURLConnection *conn = [[NSURLConnection alloc] initWithRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:callbackUrl]] delegate:self startImmediately:YES];
-        [conn release];
     }
 }
 
@@ -99,20 +103,7 @@
     }];
 }
 
-// Save the most recent URL in case multiple redirects occur
-// "iTunesURL" is an NSURL property in your class declaration
-- (NSURLRequest *)connection:(NSURLConnection *)connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)response {
-    self.iTunesURL = [response URL];
-    return request;
-}
-
-// No more redirects; use the last URL saved
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-    [[UIApplication sharedApplication] openURL:self.iTunesURL];
-}
-
 @synthesize productId;
 @synthesize callbackUrl;
-@synthesize iTunesURL;
 
 @end
