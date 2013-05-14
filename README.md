@@ -15,10 +15,14 @@ Open the source file of your view controller that should present the `SKStorePro
 
     #import "AEProductController.h"
 
+In the private interface of your class add the following property:
+
+    @property (nonatomic) AEProductController *productController;
+
 In the method that should trigger the presentation of the `SKStoreProductViewController` add the following lines:
 
-    AEProductController *controller = [AEProductController controllerWithProductId:<appId> callbackUrl:<url>];
-    [controller showInViewController:self];
+    self.productController = [AEProductController controllerWithProductId:@"<appId>" callbackUrl:@"<url>"];
+    [self.productController showInViewController:self];
 
 Replace the placeholders `<appId>` and `<url>` with your appId and your affiliate link. This appId is part of the iTunes URL: If this was your app `https://itunes.apple.com/us/app/spray-can/id315215396?mt=8`, then your appId would be `315215396`.
 
