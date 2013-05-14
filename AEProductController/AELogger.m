@@ -1,6 +1,6 @@
 //
 //  AELogger.m
-//  AEProductController
+//  AdjustIo
 //
 //  Created by Christian Wellenbrock on 15.11.12.
 //  Copyright (c) 2012 adeven. All rights reserved.
@@ -11,36 +11,54 @@
 @implementation AELogger
 @synthesize logTag = _logTag;
 
-- (id)initWithTag:(NSString *)tag enabled:(BOOL)enabled {
+- (id)initWithTag:(NSString *)tag {
     self = [super init];
     if (self == nil) return nil;
 
     self.logTag = tag;
-    self.loggingEnabled = enabled;
+    self.logLevel = AELogLevelInfo;
 
     return self;
 }
 
-+ (AELogger *)loggerWithTag:(NSString *)logTag enabled:(BOOL)enabled {
-    return [[[AELogger alloc] initWithTag:logTag enabled:enabled] autorelease];
++ (AELogger *)loggerWithTag:(NSString *)logTag {
+    return [[AELogger alloc] initWithTag:logTag];
 }
 
-- (void)log:(NSString *)format, ... {
-    if (!self.loggingEnabled) {
-        return;
-    }
-
-    va_list ap;
-    va_start(ap, format);
-    NSString *logString = [[NSString alloc] initWithFormat:format arguments:ap];
-    NSLog(@"\t[%@] %@", self.logTag, logString);
-    [logString release];
-    va_end(ap);
+- (void)verbose:(NSString *)format, ... {
+    if (self.logLevel > AELogLevelVerbose) return;
+    va_list parameters; va_start(parameters, format);
+    [self logLevel:@"Verbose" format:format parameters:parameters];
 }
 
-- (void)dealloc {
-    [super dealloc];
-    [_logTag release];
+- (void)debug:(NSString *)format, ... {
+    if (self.logLevel > AELogLevelDebug) return;
+    va_list parameters; va_start(parameters, format);
+    [self logLevel:@"Debug" format:format parameters:parameters];
+}
+
+- (void)info:(NSString *)format, ... {
+    if (self.logLevel > AELogLevelInfo) return;
+    va_list parameters; va_start(parameters, format);
+    [self logLevel:@"Info" format:format parameters:parameters];
+}
+
+- (void)warn:(NSString *)format, ... {
+    if (self.logLevel > AELogLevelWarn) return;
+    va_list parameters; va_start(parameters, format);
+    [self logLevel:@"Warn" format:format parameters:parameters];
+}
+
+- (void)error:(NSString *)format, ... {
+    if (self.logLevel > AELogLevelError) return;
+    va_list parameters; va_start(parameters, format);
+    [self logLevel:@"Error" format:format parameters:parameters];
+}
+
+- (void)logLevel:(NSString *)logLevel format:(NSString *)format parameters:(va_list) parameters {
+    NSString *logString = [[NSString alloc] initWithFormat:format arguments:parameters];
+    NSLog(@"\t[%@] %@: %@", self.logTag, logLevel, logString);
+    va_end(parameters);
 }
 
 @end

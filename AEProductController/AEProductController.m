@@ -33,13 +33,13 @@
 
     self.productId = product;
     self.callbackUrl = callback;
-    self.logger = [AELogger loggerWithTag:@"AEProductController" enabled:YES];
+    self.logger = [AELogger loggerWithTag:@"AEProductController"];
 
     return self;
 }
 
 + (AEProductController *)controllerWithProductId:(NSString *)productId callbackUrl:(NSString *)callbackUrl {
-    return [[[AEProductController alloc] initWithProductId:productId callbackUrl:callbackUrl] autorelease];
+    return [[AEProductController alloc] initWithProductId:productId callbackUrl:callbackUrl];
 }
 
 - (void)showInViewController:(UIViewController *)viewController {
@@ -52,45 +52,45 @@
     [operation setRedirectResponseBlock:^NSURLRequest *(NSURLConnection *connection, NSURLRequest *request, NSURLResponse *redirectResponse) {
         lastUrl = request.URL;
         if (redirectResponse == nil) {
-            [self.logger log:@"Callback started: %@", lastUrl.absoluteString];
+            [self.logger info:@"Callback started: %@", lastUrl.absoluteString];
         } else {
-            [self.logger log:@"Callback redirected to: %@", lastUrl.absoluteString];
+            [self.logger info:@"Callback redirected to: %@", lastUrl.absoluteString];
         }
         return request;
     }];
     [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
         if (available) {
-            [self.logger log:@"Callback finished."];
+            [self.logger info:@"Callback finished."];
         } else {
             if ([lastUrl.host isEqualToString:@"itunes.apple.com"]) {
-                [self.logger log:@"Opening iTunes URL externally."];
+                [self.logger info:@"Opening iTunes URL externally."];
                 [[UIApplication sharedApplication] openURL:lastUrl];
             } else {
-                [self.logger log:@"Callback didn't lead to iTunes URL."];
+                [self.logger info:@"Callback didn't lead to iTunes URL."];
             }
         }
     } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-        [self.logger log:[NSString stringWithFormat:@"Callback failed. %@", error]];
+        [self.logger info:[NSString stringWithFormat:@"Callback failed. %@", error]];
     }];
     [operation start];
 
     if (available) {
         // Prepare the product view controller by providing the product ID.
-        SKStoreProductViewController *productViewController = [[[SKStoreProductViewController alloc] init] autorelease];
+        SKStoreProductViewController *productViewController = [[SKStoreProductViewController alloc] init];
         productViewController.delegate = self;
         NSDictionary *storeParameters = [NSDictionary dictionaryWithObject:self.productId forKey:SKStoreProductParameterITunesItemIdentifier];
         
         // Present the product view controller
         [viewController presentViewController:productViewController animated:YES completion:^(void) {
-            [self.logger log:@"Presented product view controller."];
+            [self.logger info:@"Presented product view controller."];
         }];
         
         // Try to load the product and dismiss the product view controller in case of failure
         [productViewController loadProductWithParameters:storeParameters completionBlock:^(BOOL result, NSError *error) {
             if (result) {
-                [self.logger log:@"Presented product: %@", self.productId];
+                [self.logger info:@"Presented product: %@", self.productId];
             } else {
-                [self.logger log:@"Failed to load product: %@", error];
+                [self.logger info:@"Failed to load product: %@", error];
             }
         }];
     }
@@ -99,7 +99,7 @@
 // SKStoreProductViewControllerDelegate method that dismisses the product view controller
 - (void)productViewControllerDidFinish:(SKStoreProductViewController *)viewController {
     [viewController dismissViewControllerAnimated:YES completion:^{
-        [self.logger log:@"Dismissed product view controller."];
+        [self.logger info:@"Dismissed product view controller."];
     }];
 }
 
