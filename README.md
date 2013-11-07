@@ -1,7 +1,7 @@
 AEProductController
 ===================
 
-Small wrapper for `SKStoreProductViewController` that handles affiliate links.
+Small wrapper for `SKStoreProductViewController` that handles tracking links.
 
 ## Why?
 
