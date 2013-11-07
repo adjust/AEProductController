@@ -5,7 +5,7 @@ Small wrapper for `SKStoreProductViewController` that handles tracking links.
 
 ## Why?
 
-Apple's `SKStoreProductViewController` doesn't allow the use of affiliate links. This wrapper offers the convenient user experience of the new In-App App Store view while opening your affiliate link in the background including all redirects.
+Apple's `SKStoreProductViewController` doesn't allow the use of tracking links. This wrapper offers the convenient user experience of the new In-App App Store view while opening your tracking link in the background including all redirects.
 
 ## How?
 
